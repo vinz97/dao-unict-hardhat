@@ -11,7 +11,7 @@ contract DAOUnict {
     TokenUnict immutable i_uniToken;
     uint256 constant INITIAL_TOKEN_AMOUNT = 10000000;
     uint256 constant INITIAL_TEACHER_TOKEN = 1000;
-    uint8 codeBookingForExam;
+    uint8 private codeBookingForExam;
 
     mapping(string => DegreeCourse) public unictDegreeCourses; // example: "LM32" is the identifier for the course degree "ing.inf.magistrale"
 
@@ -22,8 +22,6 @@ contract DAOUnict {
     mapping(address => sharedObjects.Student) public unictStudents;
 
     mapping(uint8 => sharedObjects.ExamBooking) public examBookings;
-
-    event examRegistered(sharedObjects.ExamRegistration);
 
     constructor() {
         i_admin_address = msg.sender;
@@ -244,9 +242,6 @@ contract DAOUnict {
             codeSubject
         );
         return sharedObjects.ExamRegistration(date, grade, codeSubject);
-        //  emit examRegistered(
-        //      sharedObjects.ExamRegistration(date, grade, codeSubject)
-        //  );
     }
 
     // checking the students' exam bookings
@@ -354,7 +349,7 @@ contract DAOUnict {
     function registerToExam(
         string memory date,
         int codeSubject
-    ) public onlyStudent returns (uint8) {
+    ) public onlyStudent {
         sharedObjects.Student memory stud = infoExistingStudent(msg.sender);
         require(
             checkSubjectIntoCourse(stud.courseSubscribed, codeSubject) == true,
@@ -366,6 +361,9 @@ contract DAOUnict {
             codeSubject,
             date
         );
+    }
+
+    function getCodeBookingForExam() public view returns (uint8) {
         return codeBookingForExam; // the student must keep this code because the professor can check the booking with this
     }
 
