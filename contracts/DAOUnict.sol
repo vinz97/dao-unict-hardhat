@@ -5,12 +5,14 @@ pragma solidity ^0.8;
 import "./DegreeCourse.sol";
 import {sharedObjects, structSubject} from "./CommonLibrary.sol";
 import "./TokenUnict.sol";
+import "./NftUnict.sol";
 
 contract DAOUnict {
-    address immutable i_admin_address;
-    TokenUnict immutable i_uniToken;
-    uint256 constant INITIAL_TOKEN_AMOUNT = 10000000;
-    uint256 constant INITIAL_TEACHER_TOKEN = 1000;
+    address private immutable i_admin_address;
+    TokenUnict private immutable i_uniToken;
+    NftUnict private immutable i_uniNft;
+    uint256 private constant INITIAL_TOKEN_AMOUNT = 10000000;
+    uint256 private constant INITIAL_TEACHER_TOKEN = 1000;
     uint8 private codeBookingForExam;
 
     mapping(string => DegreeCourse) public unictDegreeCourses; // example: "LM32" is the identifier for the course degree "ing.inf.magistrale"
@@ -23,6 +25,8 @@ contract DAOUnict {
 
     mapping(uint8 => sharedObjects.ExamBooking) public examBookings;
 
+    mapping(address => string) public unictGraduateStudents;
+
     constructor() {
         i_admin_address = msg.sender;
         i_uniToken = new TokenUnict(
@@ -31,6 +35,7 @@ contract DAOUnict {
             "UNICT",
             msg.sender
         );
+        i_uniNft = new NftUnict();
     }
 
     // adding/delete degree courses
@@ -145,6 +150,20 @@ contract DAOUnict {
             code,
             newProfessorAddr
         );
+    }
+
+    function associateDegreeNft(
+        string memory urlNft,
+        address studentAddr
+    ) public onlySecretariat {
+        require(
+            checkExistingStudent(studentAddr) == true,
+            "The address of this student was not found!"
+        );
+        // future requirement: the degree nft can be associated only if the student has all
+        // the tokens acquireable in his degree course
+        i_uniNft.mintNft(urlNft, studentAddr);
+        unictGraduateStudents[studentAddr] = urlNft;
     }
 
     // adding teacher to Unict
@@ -345,6 +364,17 @@ contract DAOUnict {
         }
     }
 
+    function checkGraduateStudent(
+        address pubKeyStudent
+    ) public view returns (bool) {
+        bytes memory checkUrl = bytes(unictGraduateStudents[pubKeyStudent]);
+        if (checkUrl.length != 0) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     // booking to an exam
     function registerToExam(
         string memory date,
@@ -379,6 +409,16 @@ contract DAOUnict {
         returns (int[] memory)
     {
         return i_uniToken.infoSubectAlreadyRegistered(msg.sender);
+    }
+
+    function getDegreeCertificateNft(
+        address studAddr
+    ) public view returns (string memory) {
+        require(
+            checkGraduateStudent(studAddr) == true,
+            "This address doesn't belong to a graduate student"
+        );
+        return unictGraduateStudents[studAddr];
     }
 
     modifier onlyAdmin() {
